@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Caco-2 Permeability Prediction – TDC Submission by Tinkov Oleg</title>
+    <meta name="description" content="Caco-2 permeability (Caco2_Wang) prediction project for TDC ADMET benchmark. Submission by Tinkov Oleg.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg:#0b1020; --fg:#e8eef8; --muted:#a7b1c2; --accent:#5eead4; --card:#121935; --line:#223057; }
+        * { box-sizing: border-box; }
+        body { margin:0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:var(--bg); color:var(--fg); }
+        header { padding:48px 20px 24px; text-align:center; border-bottom:1px solid var(--line); background:linear-gradient(180deg, rgba(94,234,212,0.08), rgba(11,16,32,0)); }
+        header h1 { margin:0; font-weight:800; letter-spacing:0.3px; font-size: clamp(28px, 4vw, 40px); }
+        header p { margin:10px auto 0; max-width:900px; color:var(--muted); font-size: clamp(14px, 2.2vw, 18px); }
+        .container { max-width:1100px; margin:0 auto; padding:28px 20px 60px; }
+        .grid { display:grid; grid-template-columns: 1fr; gap:20px; }
+        @media (min-width: 960px) { .grid { grid-template-columns: 1fr 1fr; } }
+        section { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:22px; }
+        h2 { margin:0 0 10px; font-size:22px; letter-spacing:0.2px; }
+        p { line-height:1.65; color:var(--fg); }
+        a { color:var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        ul { margin: 10px 0 0 18px; color:var(--fg); }
+        code, .kbd { background:#0a1329; border:1px solid var(--line); padding:2px 6px; border-radius:6px; }
+        .pill { display:inline-block; padding:6px 10px; border:1px solid var(--line); border-radius:999px; color:var(--muted); font-size:12px; }
+        footer { text-align:center; color:var(--muted); padding:20px; border-top:1px solid var(--line); }
+        .row { display:flex; flex-wrap:wrap; gap:20px; }
+        .card { flex:1 1 280px; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; }
+        .muted { color:var(--muted); }
+        .kpis { display:flex; gap:16px; flex-wrap:wrap; margin-top:10px; }
+        .kpi { background:#0a1329; border:1px solid var(--line); padding:10px 12px; border-radius:10px; }
+        .kpi strong { color:var(--accent); font-size:18px; }
+        .btns { margin-top:14px; display:flex; gap:10px; flex-wrap:wrap; }
+        .btn { display:inline-block; padding:10px 14px; border:1px solid var(--line); border-radius:10px; color:var(--fg); text-decoration:none; background:#0a1329; }
+        .btn.accent { background:var(--accent); color:#06231f; border-color: transparent; font-weight:600; }
+        .legend { font-size:13px; color:var(--muted); margin-top:8px; }
+        .chart-wrap { background:#0a1329; border:1px solid var(--line); border-radius:12px; padding:12px; }
+    </style>
+    <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Caco-2 Permeability Prediction</h1>
+        <p>Therapeutics Data Commons (TDC) ADMET benchmark submission on <a href="https://tdcommons.ai/benchmark/admet_group/01caco2/" target="_blank" rel="noopener">Caco2_Wang</a> by <strong>Tinkov Oleg</strong>.</p>
+        <div class="kpis">
+            <div class="kpi"><div class="muted">Task</div><strong>Regression (MAE)</strong></div>
+            <div class="kpi"><div class="muted">Dataset Size</div><strong>906 molecules</strong></div>
+            <div class="kpi"><div class="muted">Best MAE (valid)</div><strong>0.275</strong></div>
+            <div class="kpi"><div class="muted">5-seed Test MAE</div><strong>0.272</strong></div>
+        </div>
+        <div class="btns">
+            <a class="btn accent" href="20250828_Caco2_submission.ipynb" download>Download Notebook</a>
+            <a class="btn" href="https://tdcommons.ai/benchmark/admet_group/01caco2/" target="_blank" rel="noopener">Leaderboard</a>
+        </div>
+    </header>
+
+    <div class="container">
+        <section id="introduction">
+            <span class="pill">Project Introduction</span>
+            <h2>Why Predict Caco-2 Permeability?</h2>
+            <p>Caco-2 apparent permeability (<em>P<sub>app</sub></em>) is a widely used in vitro proxy for human intestinal absorption and passive membrane transport. Early and accurate prediction of Caco-2 permeability supports medicinal chemists in prioritizing compounds with favorable oral absorption profiles, avoiding costly late-stage attrition, and informing ADME optimization cycles.</p>
+            <p>This project presents a concise, high-signal baseline using RDKit molecular descriptors and gradient-boosted decision trees to predict the Caco-2 permeability values from the TDC <code>Caco2_Wang</code> dataset. The goal is a transparent, reproducible pipeline suitable for leaderboard submission and benchmarking.</p>
+        </section>
+
+        <div class="grid">
+            <section id="methodology">
+                <span class="pill">Methodology</span>
+                <h2>Features, Preprocessing, and Model</h2>
+                <ul>
+                    <li><strong>Data</strong>: TDC <code>Caco2_Wang</code> split with scaffold-based train/validation/test partitions.</li>
+                    <li><strong>Descriptors</strong>: RDKit 2D physicochemical descriptors computed per SMILES (e.g., logP, TPSA, MW, HBD/HBA, ring counts).</li>
+                    <li><strong>Preprocessing</strong>: Mean imputation for missing values and <span class="kbd">RobustScaler</span> for both features and target; transformers are fit on training data only and reused for validation/test to avoid leakage.</li>
+                    <li><strong>Model</strong>: XGBoost regressor (<span class="kbd">reg:squarederror</span>) with GPU acceleration and <span class="kbd">mae</span> evaluation metric; early stopping on validation MAE.</li>
+                    <li><strong>Hyperparameter search</strong>: Grid over learning rate, max depth, subsample, colsample, child weight, regularization terms, and estimators with early stopping to select the best iteration count.</li>
+                    <li><strong>Submission protocol</strong>: TDC <span class="kbd">admet_group</span> API used to produce 5 independent seeds; predictions inverse-transformed to original units before evaluation.</li>
+                </ul>
+                <p class="legend">Implementation details are available in the notebook; model and parameters are saved under <code>model/Cacao2</code>.</p>
+            </section>
+
+            <section id="findings">
+                <span class="pill">Key Findings</span>
+                <h2>Performance and Observations</h2>
+                <ul>
+                    <li><strong>Validation</strong>: Best MAE ≈ 0.275 with early-stopped boosting rounds (~208).</li>
+                    <li><strong>Official evaluation</strong>: 5-seed test MAE = 0.272 with std ≈ 0.006 on the scaffold split.</li>
+                    <li><strong>Simplicity vs. accuracy</strong>: Classical RDKit descriptors + boosted trees remain competitive, offering strong baselines with minimal compute and excellent reproducibility.</li>
+                </ul>
+            </section>
+        </div>
+
+        <section id="viz">
+            <span class="pill">Interactive Visualizations</span>
+            <h2>MAE Comparison and Error Distribution</h2>
+            <div class="row">
+                <div class="card" style="flex:1 1 720px;">
+                    <div class="chart-wrap">
+                        <canvas id="maeChart" height="120"></canvas>
+                    </div>
+                    <div class="legend">Comparison of this submission to selected entries on the TDC leaderboard (lower is better). Values are indicative; see the official page for the latest numbers.</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="credits">
+            <span class="pill">Authorship & Acknowledgments</span>
+            <h2>About This Work</h2>
+            <p>This study was conducted by <strong>Tinkov Oleg</strong> for the <a href="https://tdcommons.ai/benchmark/admet_group/01caco2/" target="_blank" rel="noopener">TDC Caco2_Wang</a> benchmark. The code relies on RDKit, scikit-learn, XGBoost, and the TDC Python API.</p>
+            <p class="muted">Contact: please open an issue on the repository hosting this page.</p>
+        </section>
+
+        <section id="refs">
+            <span class="pill">References</span>
+            <h2>Selected Literature</h2>
+            <ul>
+                <li><strong>TDC ADMET Group Leaderboard</strong>: <a href="https://tdcommons.ai/benchmark/admet_group/01caco2/" target="_blank" rel="noopener">Benchmark page</a></li>
+                <li><strong>Caco-2 dataset (Wang et al.)</strong>: See TDC task card and references therein.</li>
+                <li><strong>Chemprop baseline</strong>: Swanson et al., <a href="https://pubs.acs.org/doi/full/10.1021/acs.jcim.9b00237" target="_blank" rel="noopener">ACS JCIM (2019)</a></li>
+                <li><strong>MolMapNet</strong>: Shen et al., <a href="https://www.nature.com/articles/s42256-021-00301-6" target="_blank" rel="noopener">Nat Mach Intell (2021)</a></li>
+                <li><strong>DeepPurpose examples</strong>: <a href="https://doi.org/10.1093/bioinformatics/btaa1005" target="_blank" rel="noopener">Bioinformatics (2021)</a></li>
+                <li><strong>TDC overview</strong>: Huang et al., <a href="https://tdcommons.ai/" target="_blank" rel="noopener">Therapeutics Data Commons</a></li>
+            </ul>
+        </section>
+    </div>
+
+    <footer>
+        © <span id="y"></span> Tinkov Oleg · Caco-2_Wang TDC Submission
+    </footer>
+
+    <script>
+        window.addEventListener('DOMContentLoaded', function () {
+        document.getElementById('y').textContent = new Date().getFullYear();
+
+        const ctx1 = document.getElementById('maeChart');
+        const labels = ['CaliciBoost', 'This Work (Oleg Tinkov)', 'XGBoost (Learsch)', 'MapLight', 'BaseBoosting'];
+        const values = [0.256, 0.272, 0.274, 0.276, 0.285];
+        const colors = ['#22c55e', '#5eead4', '#60a5fa', '#f59e0b', '#ef4444'];
+
+        const maeChart = new Chart(ctx1, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'MAE (cm/s, lower is better) – indicative',
+                    data: values,
+                    backgroundColor: colors,
+                    borderColor: '#223057',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { color: '#cbd5e1' }, grid: { color: '#223057' } },
+                    y: { ticks: { color: '#cbd5e1' }, grid: { color: '#223057' }, beginAtZero: true, suggestedMax: 0.6 }
+                }
+            }
+        });
+        
+        });
+    </script>
+</body>
+</html>
+
+
